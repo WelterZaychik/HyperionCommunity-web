@@ -8,6 +8,16 @@ export default {
     });
   },
   
+  getUserInfo(account) {
+    return request({
+      url: `/user/info`,
+      method: "GET",
+      params: {
+        account: account
+      }
+    });
+  },
+  
   checkMutualFollows(userId) {
     // 由于后端没有提供专门的checkMutualFollows接口
     // 我们可以通过先获取用户的关注列表和粉丝列表，然后计算交集来实现互相关注检查

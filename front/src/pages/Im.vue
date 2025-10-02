@@ -3,21 +3,20 @@
     <navigation></navigation>
     <div class="im-content">
       <el-row :gutter="20">
-        <!-- 消息通知栏 -->
-        <el-col :span="6">
-          <el-card class="notification-card">
-            <div slot="header" class="notification-header">
-              <span>消息通知</span>
-              <el-badge :value="unreadNotificationCount" class="badge"></el-badge>
+        <!-- 关注列表 -->
+        <el-col :span="8">
+          <el-card class="user-list-card">
+            <div slot="header" class="user-list-header">
+              <span>我的关注</span>
+              <el-tag size="mini" type="info">点击用户开始聊天</el-tag>
             </div>
-            <div v-for="notif in notifications" :key="notif.from" 
-                 class="notification-item" @click="openChatFromNotification(notif)">
-              <el-avatar :src="getUserAvatar(notif.from)" size="small"></el-avatar>
-              <div class="notification-content">
-                <div class="notification-user">{{ notif.fromName }}</div>
-                <div class="notification-text">{{ notif.text | truncate(20) }}</div>
-                <div class="notification-time">{{ formatTime(notif.timestamp) }}</div>
-              </div>
+            <div v-for="user in followList" :key="user.account" 
+                 class="user-item" @click="selectUser(user)">
+              <el-avatar :src="user.avatar" size="small"></el-avatar>
+              <span class="username">{{ user.name }}</span>
+              <i class="el-icon-chat-dot-round chat-icon" 
+                 :class="{ active: currentChatUser && currentChatUser.account === user.account }"></i>
+              <el-tag v-if="isUserOnline(user.account)" size="mini" type="success" class="online-tag">在线</el-tag>
             </div>
           </el-card>
         </el-col>
@@ -34,19 +33,19 @@
             </div>
             <div class="message-container" ref="messageContainer">
               <div v-for="(msg, index) in filteredMessages" :key="index" 
-                   :class="['message-item', msg.from === user.account ? 'sent' : 'received']">
-                <div class="avatar">
-                  <el-avatar :src="msg.from === user.account ? userAvatar : defaultAvatar"></el-avatar>
-                </div>
-                <div class="message-content">
-                  <div class="message-meta">
-                    <span class="username">{{ msg.fromName || msg.from }}</span>
-                    <span class="time">{{ formatTime(msg.timestamp) }}</span>
+                     :class="['message-item', msg.from === user.account ? 'sent' : 'received']">
+                  <div class="avatar">
+                    <el-avatar :src="msg.from === user.account ? user.avatar : (msg.avatar || defaultAvatar)"></el-avatar>
                   </div>
-                  <div class="message-bubble">{{ msg.text }}</div>
+                  <div class="message-content">
+                    <div class="message-meta">
+                      <span class="username">{{ msg.fromName || msg.from }}</span>
+                      <span class="time">{{ formatTime(msg.timestamp) }}</span>
+                    </div>
+                    <div class="message-bubble">{{ msg.text }}</div>
+                  </div>
                 </div>
               </div>
-            </div>
             <div class="input-area">
               <el-input type="textarea" :rows="4" v-model="messageText" 
                        placeholder="输入消息..." @keyup.enter.native="sendMessage"
@@ -61,20 +60,29 @@
           </div>
         </el-col>
 
-        <!-- 关注列表 -->
-        <el-col :span="8">
-          <el-card class="user-list-card">
-            <div slot="header" class="user-list-header">
-              <span>我的关注</span>
-              <el-tag size="mini" type="info">点击用户开始聊天</el-tag>
+        <!-- 消息通知栏 -->
+        <el-col :span="6">
+          <el-card class="notification-card">
+            <div slot="header" class="notification-header">
+              <span>消息通知</span>
+              <el-badge :value="unreadNotificationCount" class="badge"></el-badge>
             </div>
-            <div v-for="user in followList" :key="user.account" 
-                 class="user-item" @click="selectUser(user)">
-              <el-avatar :src="defaultAvatar" size="small"></el-avatar>
-              <span class="username">{{ user.name }}</span>
-              <i class="el-icon-chat-dot-round chat-icon" 
-                 :class="{ active: currentChatUser && currentChatUser.account === user.account }"></i>
-              <el-tag v-if="isUserOnline(user.account)" size="mini" type="success" class="online-tag">在线</el-tag>
+            <div v-for="notif in notifications" :key="notif.from" 
+                 class="notification-item" @click="openChatFromNotification(notif)">
+              <el-avatar :src="getUserAvatar(notif.from)" size="small"></el-avatar>
+              <div class="notification-content">
+                <div class="notification-user">{{ notif.fromName }}</div>
+                <div class="notification-text">{{ notif.text | truncate(20) }}</div>
+                <div class="notification-time">{{ formatTime(notif.timestamp) }}</div>
+              </div>
+              <div class="notification-actions" @click.stop>
+                <el-dropdown trigger="click" @command="(command) => handleNotificationCommand(notif, command)">
+                  <i class="el-icon-more" style="cursor: pointer;"></i>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item command="deleteHistory">删除聊天记录</el-dropdown-item>
+                  </el-dropdown-menu>
+                </el-dropdown>
+              </div>
             </div>
           </el-card>
         </el-col>
@@ -87,19 +95,89 @@
 import navigation from "@/components/navigation.vue";
 import DOMPurify from "dompurify";
 import followsApi from "../api/follows";
-import { throttle } from 'lodash';
+import { throttle, debounce } from 'lodash';
+
+// 防抖保存到本地存储的函数
+const debouncedSave = debounce((key, value, callback) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    if (callback) callback();
+  } catch (error) {
+    console.error(`保存${key}到本地存储失败:`, error);
+    callback && callback(error);
+  }
+}, 1000);
+
+// 防抖读取本地存储的函数 - 避免短时间内多次重复读取
+const debouncedLoad = debounce((key, defaultValue, callback) => {
+  try {
+    const data = localStorage.getItem(key);
+    callback(null, data ? JSON.parse(data) : defaultValue);
+  } catch (error) {
+    console.error(`从本地存储读取${key}失败:`, error);
+    callback(error, defaultValue);
+  }
+}, 100);
+
+// 消息比较函数，用于高效查找重复消息
+const messageComparator = (msg1, msg2) => {
+  return msg1.id === msg2.id || 
+         (msg1.from === msg2.from && 
+          msg1.to === msg2.to && 
+          msg1.timestamp === msg2.timestamp && 
+          msg1.text === msg2.text);
+};
+
+// 用户查找函数，支持多种数据源
+const findUserByAccount = (account, sources = []) => {
+  for (const source of sources) {
+    if (source instanceof Map) {
+      const user = source.get(account);
+      if (user) return user;
+    } else if (Array.isArray(source)) {
+      const user = source.find(u => u.account === account);
+      if (user) return user;
+    }
+  }
+  return null;
+};
+
+// 高效的消息过滤函数
+const filterMessagesByUsers = (messages, account1, account2) => {
+  // 创建消息索引，提高重复查找效率
+  const messageIndex = new Map();
+  const result = [];
+  
+  for (const msg of messages) {
+    // 检查消息是否在两个账户之间
+    const isBetweenUsers = 
+      (msg.from === account1 && msg.to === account2) ||
+      (msg.from === account2 && msg.to === account1);
+    
+    if (isBetweenUsers) {
+      // 使用消息ID作为唯一键，避免重复
+      if (!messageIndex.has(msg.id)) {
+        messageIndex.set(msg.id, true);
+        result.push(msg);
+      }
+    }
+  }
+  
+  // 按时间戳排序
+  return result.sort((a, b) => a.timestamp - b.timestamp);
+};
 
 export default {
   name: "Im",
   components: { navigation },
   data() {
     return {
-      user: JSON.parse(localStorage.getItem("userInfo") || "{}"),
+      user: this.loadFromLocalStorage("userInfo", {}),
       followList: [],
       onlineUsers: [],
       currentChatUser: null,
       messageText: "",
-      messages: JSON.parse(localStorage.getItem("chatMessages") || "[]"),
+      messages: this.loadFromLocalStorage("chatMessages", []),
       sending: false,
       defaultAvatar: "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png",
       userAvatar: "https://browne.oss-cn-shenzhen.aliyuncs.com/Avatar.jpg",
@@ -107,9 +185,11 @@ export default {
       maxReconnectAttempts: 5,
       reconnectDelay: 1000,
       mutualFollows: new Set(),
-      // 通知相关数据
-      notifications: [],
-      notificationUsers: new Map(),
+      // 通知相关数据 - 从localStorage加载
+      notifications: this.loadFromLocalStorage("notifications", []),
+      notificationUsers: new Map(this.loadFromLocalStorage("notificationUsers", [])),
+      // 添加未读通知计数属性
+      unreadNotificationCount: 0
     };
   },
   computed: {
@@ -126,13 +206,51 @@ export default {
   watch: {
     messages: {
       handler(newVal) {
-        localStorage.setItem("chatMessages", JSON.stringify(newVal));
+        // 使用防抖优化本地存储写入
+        debouncedSave("chatMessages", newVal, (error) => {
+          if (error) {
+            this.$message.error(`数据保存失败，请检查浏览器存储空间`);
+          }
+        });
+      },
+      deep: true,
+    },
+    // 添加notifications的watch
+    notifications: { 
+      handler(newVal) {
+        // 使用防抖优化本地存储写入
+        debouncedSave("notifications", newVal, (error) => {
+          if (error) {
+            this.$message.error(`通知数据保存失败`);
+          }
+        });
+      },
+      deep: true,
+    },
+    // 添加notificationUsers的watch，需要将Map转换为数组存储
+    notificationUsers: {
+      handler(newVal) {
+        // 使用防抖优化本地存储写入
+        debouncedSave("notificationUsers", Array.from(newVal.entries()), (error) => {
+          if (error) {
+            this.$message.error(`用户信息数据保存失败`);
+          }
+        });
       },
       deep: true,
     },
     currentChatUser(newUser) {
       if (newUser) {
-        this.requestHistory(newUser.account);
+        // 只在本地没有该用户相关消息时才请求历史消息
+        const hasMessages = this.messages.some(msg => 
+          (msg.from === newUser.account && msg.to === this.user.account) ||
+          (msg.from === this.user.account && msg.to === newUser.account)
+        );
+        if (!hasMessages) {
+          this.requestHistory(newUser.account);
+        } else {
+          this.$nextTick(this.scrollToBottom);
+        }
       }
     },
   },
@@ -153,6 +271,27 @@ export default {
     window.removeEventListener("focus", this.handleWindowFocus);
   },
   methods: {
+    // 统一的本地存储管理方法 - 优化版
+    saveToLocalStorage(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {
+        console.error(`保存${key}到本地存储失败:`, error);
+        this.$message.error(`数据保存失败，请检查浏览器存储空间`);
+      }
+    },
+
+    // 从本地存储读取数据 - 优化版
+    loadFromLocalStorage(key, defaultValue = null) {
+      try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : defaultValue;
+      } catch (error) {
+        console.error(`从本地存储读取${key}失败:`, error);
+        return defaultValue;
+      }
+    },
+
     async fetchFollowList(id) {
       try {
         const response = await followsApi.getFollows(id);
@@ -177,11 +316,59 @@ export default {
       // 由于没有后端接口提供互相关注状态，暂时默认返回true，避免显示"对方未关注您"标签
       return true;
     },
-
+    
+    // 处理通知项的命令 - 修改为专注于删除聊天记录功能
+    handleNotificationCommand(notification, command) {
+      if (command === 'deleteHistory') {
+        this.$confirm('确定要删除与该用户的所有聊天记录吗？', '确认删除', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          const account = notification.from;
+          // 创建事务性删除操作
+          const deleteOperation = () => {
+            // 1. 删除与该用户相关的所有消息记录
+            this.messages = this.messages.filter(msg => 
+              !(msg.from === account && msg.to === this.user.account) &&
+              !(msg.from === this.user.account && msg.to === account)
+            );
+            // 2. 删除对应的通知项
+            this.notifications = this.notifications.filter(n => n.from !== account);
+            // 3. 从notificationUsers中移除用户信息
+            this.notificationUsers.delete(account);
+            // 4. 立即保存更新后的消息到localStorage，确保chatMessages被清除
+            localStorage.setItem('chatMessages', JSON.stringify(this.messages));
+          };
+    
+          try {
+            // 首先向后端发送删除请求
+            if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+              const deleteRequest = {
+                type: 'deleteHistory',
+                account: this.user.account,
+                withAccount: account
+              };
+              this.socket.send(JSON.stringify(deleteRequest));
+            }
+            
+            // 然后执行本地删除操作
+            deleteOperation();
+            this.$message.success('聊天记录已成功删除');
+          } catch (error) {
+            console.error('删除聊天记录失败:', error);
+            this.$message.error('删除失败，请稍后重试');
+          }
+        }).catch(() => {
+          // 用户取消删除操作
+        });
+      }
+    },
+    
     isUserOnline(account) {
       return this.onlineUsers.some(user => user.account === account);
     },
-
+    
     initWebSocket() {
       if (!this.user.account) {
         this.$message.error("请先登录");
@@ -233,6 +420,13 @@ export default {
         case "error":
           this.handleError(data);
           break;
+        case "deleteHistory":
+          // 处理后端返回的删除历史记录成功响应
+          if (data.status === "success") {
+            console.log("后端历史记录删除成功");
+            // 可以在这里添加额外的处理逻辑，如更新UI状态等
+          }
+          break;
         default:
           this.handleChatMessage(data);
       }
@@ -252,7 +446,8 @@ export default {
     attemptReconnect() {
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
         this.reconnectAttempts++;
-        const delay = Math.min(this.reconnectDelay * this.reconnectAttempts, 5000);
+        // 指数退避算法：基础延迟 * (2^重连次数)，但不超过最大延迟
+        const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 5000);
 
         console.log(`尝试第 ${this.reconnectAttempts} 次重连，等待 ${delay}ms`);
         setTimeout(() => {
@@ -268,8 +463,10 @@ export default {
     },
 
     handleHistoryMessages(messages) {
+      // 优化的历史消息处理，避免重复添加
       messages.forEach(msg => {
-        if (!this.messages.some(m => m.id === msg.id)) {
+        // 使用消息比较函数检查是否已存在该消息
+        if (!this.messages.some(m => messageComparator(m, msg))) {
           this.messages.push(msg);
         }
       });
@@ -280,13 +477,24 @@ export default {
       // 创建一个Map，用于按发送者账号分组存储最新的通知
       const notificationMap = new Map();
       
-      data.notifications.forEach(notification => {
-        // 如果该发送者没有通知，或者当前通知的时间戳更新，则更新
-        if (!notificationMap.has(notification.from) || 
-            notification.timestamp > notificationMap.get(notification.from).timestamp) {
-          notificationMap.set(notification.from, notification);
-        }
+      // 首先添加本地已有的通知
+      this.notifications.forEach(notification => {
+        notificationMap.set(notification.from, notification);
       });
+      
+      // 然后用服务器返回的通知更新，只保留最新的通知
+      if (data.notifications && data.notifications.length > 0) {
+        data.notifications.forEach(notification => {
+          // 如果该发送者没有通知，或者当前通知的时间戳更新，则更新
+          if (!notificationMap.has(notification.from) || 
+              notification.timestamp > notificationMap.get(notification.from).timestamp) {
+            notificationMap.set(notification.from, notification);
+            
+            // 为该发送者添加到notificationUsers（如果不存在）
+            this.addNotificationUser(notification.from, notification.fromName);
+          }
+        });
+      }
       
       // 转换为数组并按时间戳排序
       this.notifications = Array.from(notificationMap.values())
@@ -295,7 +503,9 @@ export default {
 
     handleNewNotification(data) {
       const notification = data.notification;
-      this.addNotificationUser(notification.from, notification.fromName);
+      // 从data中获取头像信息（可能在message或notification对象中）
+      const avatar = data.message?.avatar || this.defaultAvatar;
+      this.addNotificationUser(notification.from, notification.fromName, avatar);
       
       // 检查是否已存在该发送者的通知
       const existingIndex = this.notifications.findIndex(n => n.from === notification.from);
@@ -314,13 +524,19 @@ export default {
       this.showDesktopNotification(notification);
     },
 
-    addNotificationUser(account, name) {
+    addNotificationUser(account, name, avatar = null) {
       if (!this.notificationUsers.has(account)) {
         this.notificationUsers.set(account, {
           account: account,
           name: name,
-          avatar: this.defaultAvatar
+          avatar: avatar || this.defaultAvatar
         });
+      } else if (avatar) {
+        // 如果已经存在该用户但有了新的头像信息，更新头像
+        const user = this.notificationUsers.get(account);
+        if (user.avatar === this.defaultAvatar) {
+          user.avatar = avatar;
+        }
       }
     },
 
@@ -332,8 +548,14 @@ export default {
     },
 
     handleChatMessage(data) {
+      // 优化的消息处理
       if (!this.messages.some((msg) => msg.id === data.id)) {
         this.messages.push(data);
+        
+        // 如果消息中有头像信息，更新notificationUsers
+        if (data.avatar) {
+          this.addNotificationUser(data.from, data.fromName, data.avatar);
+        }
         
         if (this.currentChatUser && data.from === this.currentChatUser.account) {
           this.$nextTick(this.scrollToBottom);
@@ -343,6 +565,8 @@ export default {
 
     selectUser(user) {
       this.currentChatUser = user;
+      // 不再清空当前消息列表，而是依赖watch中的逻辑
+      // watch中的currentChatUser会自动处理消息加载
     },
 
     requestHistory(account) {
@@ -358,12 +582,22 @@ export default {
     },
 
     openChatFromNotification(notification) {
-      const user = this.notificationUsers.get(notification.from) || 
-                  this.followList.find(u => u.account === notification.from);
-      if (user) {
-        this.currentChatUser = user;
-        this.$nextTick(this.scrollToBottom);
+      // 使用优化的用户查找函数
+      let user = findUserByAccount(notification.from, [this.notificationUsers, this.followList]);
+      
+      // 如果找不到用户，创建一个临时用户对象
+      if (!user) {
+        user = {
+          account: notification.from,
+          name: notification.fromName || `用户${notification.from}`,
+          avatar: this.defaultAvatar
+        };
+        // 将临时用户添加到notificationUsers中，以便下次使用
+        this.notificationUsers.set(notification.from, user);
       }
+      
+      this.currentChatUser = user;
+      this.$nextTick(this.scrollToBottom);
     },
 
     sendMessage: throttle(function() {
@@ -375,6 +609,7 @@ export default {
         to: this.currentChatUser.account,
         text: DOMPurify.sanitize(this.messageText.trim()),
         timestamp: Date.now(),
+        avatar: this.user.avatar || this.defaultAvatar // 添加发送者头像信息
       };
 
       this.sending = true;
@@ -448,8 +683,8 @@ export default {
     },
 
     getUserAvatar(account) {
-      const user = this.followList.find(u => u.account === account) || 
-                  this.notificationUsers.get(account);
+      // 使用优化的用户查找函数
+      const user = findUserByAccount(account, [this.followList, this.notificationUsers]);
       return user?.avatar || this.defaultAvatar;
     },
 
@@ -473,13 +708,14 @@ export default {
 
 <style scoped>
 .im-container {
-  padding: 20px;
+  
   height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 .im-content {
+  padding: 20px;
   flex: 1;
   margin-top: 20px;
   display: flex;
