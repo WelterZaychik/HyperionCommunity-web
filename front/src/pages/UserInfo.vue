@@ -90,13 +90,36 @@ export default {
       // userApi
       //   .userLogout(JSON.parse(localStorage.getItem("userInfo")).account)
       //   .then((response) => {
-      //     localStorage.removeItem("token");
-      //     localStorage.removeItem("userInfo");
+      //     this.cleanupWebSocketData();
       //     this.$router.push("/");
       //   });
+      this.cleanupWebSocketData();
+      // 跳转到首页并刷新页面
+      this.$router.push("/").then(() => {
+        window.location.reload();
+      });
+    },
+    cleanupWebSocketData() {
+      // 1. 清理本地存储的WebSocket相关数据
       localStorage.removeItem("token");
       localStorage.removeItem("userInfo");
-      this.$router.push("/");
+      localStorage.removeItem("chatMessages");
+      localStorage.removeItem("notifications");
+      localStorage.removeItem("notificationUsers");
+      
+      // 2. 如果当前在Im页面，需要关闭WebSocket连接
+      if (window.socket && window.socket.readyState === WebSocket.OPEN) {
+        window.socket.close();
+        window.socket = null;
+      }
+      
+      // 3. 清除全局WebSocket引用
+      if (window.currentSocket) {
+        window.currentSocket.close();
+        window.currentSocket = null;
+      }
+      
+      console.log("WebSocket数据清理完成");
     },
     routeChange() {
       this.changeTag();

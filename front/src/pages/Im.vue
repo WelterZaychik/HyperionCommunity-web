@@ -42,14 +42,32 @@
                       <span class="username">{{ msg.fromName || msg.from }}</span>
                       <span class="time">{{ formatTime(msg.timestamp) }}</span>
                     </div>
-                    <div class="message-bubble">{{ msg.text }}</div>
+                    <div class="message-bubble" v-html="analyzeEmoji(msg.text)"></div>
                   </div>
                 </div>
               </div>
             <div class="input-area">
               <el-input type="textarea" :rows="4" v-model="messageText" 
-                       placeholder="输入消息..." @keyup.enter.native="sendMessage"
-                       :disabled="!currentChatUser"></el-input>
+                       placeholder="输入消息..." @keyup.enter.native="sendMessage"></el-input>
+              <div class="emoji-area">
+                <div :class="emojiPanelOpen ? 'OwO OwO-open' : 'OwO'">
+                  <div class="OwO-logo" @click="emojiPanelOpen = !emojiPanelOpen">
+                    <span>表情包</span>
+                  </div>
+                  <div class="OwO-body">
+                    <ul class="OwO-items OwO-items-show">
+                      <li class="OwO-item" v-for="(oitem,index) in OwOlist" :key="'oitem'+index" @click="choseEmoji(oitem.title)">
+                        <img :src="require('../assets/emot/image/'+oitem.url)" alt="">
+                      </li>
+                    </ul>
+                    <div class="OwO-bar">
+                      <ul class="OwO-packages">
+                        <li class="OwO-package-active">Emoji</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="send-button">
                 <el-button type="primary" :loading="sending" @click="sendMessage" 
                           :disabled="!messageText.trim() || !currentChatUser">
@@ -65,11 +83,11 @@
           <el-card class="notification-card">
             <div slot="header" class="notification-header">
               <span>消息通知</span>
-              <el-badge :value="unreadNotificationCount" class="badge"></el-badge>
+              <el-badge :value="computedUnreadNotificationCount" class="badge"></el-badge>
             </div>
             <div v-for="notif in notifications" :key="notif.from" 
-                 class="notification-item" @click="openChatFromNotification(notif)">
-              <el-avatar :src="getUserAvatar(notif.from)" size="small"></el-avatar>
+                 :class="['notification-item', { 'unread': true }]" @click="openChatFromNotification(notif)">
+              <el-avatar :src="notif.avatar" size="small"></el-avatar>
               <div class="notification-content">
                 <div class="notification-user">{{ notif.fromName }}</div>
                 <div class="notification-text">{{ notif.text | truncate(20) }}</div>
@@ -189,7 +207,84 @@ export default {
       notifications: this.loadFromLocalStorage("notifications", []),
       notificationUsers: new Map(this.loadFromLocalStorage("notificationUsers", [])),
       // 添加未读通知计数属性
-      unreadNotificationCount: 0
+      unreadNotificationCount: 0,
+      // 表情包相关数据
+      emojiPanelOpen: false,
+      OwOlist: [
+        //表情包和表情路径
+        { title: "微笑", url: "weixiao.gif" },
+        { title: "嘻嘻", url: "xixi.gif" },
+        { title: "哈哈", url: "haha.gif" },
+        { title: "可爱", url: "keai.gif" },
+        { title: "可怜", url: "kelian.gif" },
+        { title: "挖鼻", url: "wabi.gif" },
+        { title: "吃惊", url: "chijing.gif" },
+        { title: "害羞", url: "haixiu.gif" },
+        { title: "挤眼", url: "jiyan.gif" },
+        { title: "闭嘴", url: "bizui.gif" },
+        { title: "鄙视", url: "bishi.gif" },
+        { title: "爱你", url: "aini.gif" },
+        { title: "泪", url: "lei.gif" },
+        { title: "偷笑", url: "touxiao.gif" },
+        { title: "亲亲", url: "qinqin.gif" },
+        { title: "生病", url: "shengbing.gif" },
+        { title: "太开心", url: "taikaixin.gif" },
+        { title: "白眼", url: "baiyan.gif" },
+        { title: "右哼哼", url: "youhengheng.gif" },
+        { title: "左哼哼", url: "zuohengheng.gif" },
+        { title: "嘘", url: "xu.gif" },
+        { title: "衰", url: "shuai.gif" },
+        { title: "吐", url: "tu.gif" },
+        { title: "哈欠", url: "haqian.gif" },
+        { title: "抱抱", url: "baobao.gif" },
+        { title: "怒", url: "nu.gif" },
+        { title: "疑问", url: "yiwen.gif" },
+        { title: "馋嘴", url: "chanzui.gif" },
+        { title: "拜拜", url: "baibai.gif" },
+        { title: "思考", url: "sikao.gif" },
+        { title: "汗", url: "han.gif" },
+        { title: "困", url: "kun.gif" },
+        { title: "睡", url: "shui.gif" },
+        { title: "钱", url: "qian.gif" },
+        { title: "失望", url: "shiwang.gif" },
+        { title: "酷", url: "ku.gif" },
+        { title: "色", url: "se.gif" },
+        { title: "哼", url: "heng.gif" },
+        { title: "鼓掌", url: "guzhang.gif" },
+        { title: "晕", url: "yun.gif" },
+        { title: "悲伤", url: "beishang.gif" },
+        { title: "抓狂", url: "zhuakuang.gif" },
+        { title: "黑线", url: "heixian.gif" },
+        { title: "阴险", url: "yinxian.gif" },
+        { title: "怒骂", url: "numa.gif" },
+        { title: "互粉", url: "hufen.gif" },
+        { title: "书呆子", url: "shudaizi.gif" },
+        { title: "愤怒", url: "fennu.gif" },
+        { title: "感冒", url: "ganmao.gif" },
+        { title: "心", url: "xin.gif" },
+        { title: "伤心", url: "shangxin.gif" },
+        { title: "猪", url: "zhu.gif" },
+        { title: "熊猫", url: "xiongmao.gif" },
+        { title: "兔子", url: "tuzi.gif" },
+        { title: "喔克", url: "ok.gif" },
+        { title: "耶", url: "ye.gif" },
+        { title: "棒棒", url: "good.gif" },
+        { title: "不", url: "no.gif" },
+        { title: "赞", url: "zan.gif" },
+        { title: "来", url: "lai.gif" },
+        { title: "弱", url: "ruo.gif" },
+        { title: "草泥马", url: "caonima.gif" },
+        { title: "神马", url: "shenma.gif" },
+        { title: "囧", url: "jiong.gif" },
+        { title: "浮云", url: "fuyun.gif" },
+        { title: "给力", url: "geili.gif" },
+        { title: "围观", url: "weiguan.gif" },
+        { title: "威武", url: "weiwu.gif" },
+        { title: "话筒", url: "huatong.gif" },
+        { title: "蜡烛", url: "lazhu.gif" },
+        { title: "蛋糕", url: "dangao.gif" },
+        { title: "发红包", url: "fahongbao.gif" },
+      ]
     };
   },
   computed: {
@@ -202,6 +297,10 @@ export default {
         )
         .sort((a, b) => a.timestamp - b.timestamp);
     },
+    // 计算未读通知数量
+    computedUnreadNotificationCount() {
+      return this.notifications.length;
+    }
   },
   watch: {
     messages: {
@@ -260,7 +359,15 @@ export default {
     }
   },
   mounted() {
-    this.fetchFollowList(this.user.id);
+    // 检查用户信息是否有效
+    if (this.user && this.user.id) {
+      this.fetchFollowList(this.user.id);
+    } else {
+      console.warn("用户信息无效，无法获取关注列表");
+
+      
+      this.$message.warning("请先登录");
+    }
     this.initWebSocket();
     window.addEventListener("beforeunload", this.closeSocket);
     window.addEventListener("focus", this.handleWindowFocus);
@@ -294,8 +401,10 @@ export default {
 
     async fetchFollowList(id) {
       try {
+        console.log("获取关注列表中:", this.followList);
         const response = await followsApi.getFollows(id);
         this.followList = response.data.followsList;
+        console.log("获取关注列表成功:", this.followList);
         this.checkMutualFollows();
       } catch (error) {
         console.error("获取关注列表失败:", error);
@@ -305,6 +414,11 @@ export default {
     
     async checkMutualFollows() {
       try {
+        // 检查用户信息是否有效
+        if (!this.user || !this.user.id) {
+          console.warn("用户信息无效，无法检查互关关系");
+          return;
+        }
         const response = await followsApi.checkMutualFollows(this.user.id);
         this.mutualFollows = new Set(response.data.mutualFollows);
       } catch (error) {
@@ -504,7 +618,13 @@ export default {
     handleNewNotification(data) {
       const notification = data.notification;
       // 从data中获取头像信息（可能在message或notification对象中）
-      const avatar = data.message?.avatar || this.defaultAvatar;
+      const avatar = data.message?.avatar || notification.avatar || this.defaultAvatar;
+      
+      // 确保notification对象包含avatar字段
+      if (!notification.avatar) {
+        notification.avatar = avatar;
+      }
+      
       this.addNotificationUser(notification.from, notification.fromName, avatar);
       
       // 检查是否已存在该发送者的通知
@@ -662,6 +782,37 @@ export default {
       if (container) container.scrollTop = container.scrollHeight;
     },
 
+    // 表情包相关方法
+    choseEmoji(inner) {
+      this.messageText += "[" + inner + "]";
+      // 添加表情后自动关闭表情面板
+      this.emojiPanelOpen = false;
+    },
+
+    analyzeEmoji(cont) {
+      // 编译表情替换成图片展示出来
+      var pattern1 = /\[[\u4e00-\u9fa5]+\]/g;
+      var pattern2 = /\[[\u4e00-\u9fa5]+\]/;
+      var content = cont.match(pattern1);
+      var str = cont;
+      if (content) {
+        for (var i = 0; i < content.length; i++) {
+          for (var j = 0; j < this.OwOlist.length; j++) {
+            if ("[" + this.OwOlist[j].title + "]" == content[i]) {
+              var src = this.OwOlist[j].url;
+              break;
+            }
+          }
+
+          str = str.replace(
+            pattern2,
+            '<img src="' + require("../assets/emot/image/" + src) + '" style="width: 24px; height: 24px; vertical-align: middle; margin: 0 2px;" />'
+          );
+        }
+      }
+      return str;
+    },
+
     showDesktopNotification(notification) {
       if (!("Notification" in window)) return;
       
@@ -701,6 +852,46 @@ export default {
     },
     beforeUnmount() {
       this.closeSocket();
+    },
+    
+    // 监听路由变化，当离开Im页面时清理数据
+    beforeRouteLeave(to, from, next) {
+      this.closeSocket();
+      next();
+    },
+    
+    // 监听用户信息变化，当用户切换时清理数据
+    watch: {
+      'user.account': {
+        handler(newAccount, oldAccount) {
+          if (newAccount && oldAccount && newAccount !== oldAccount) {
+            // 用户切换，清理所有聊天数据
+            this.cleanupUserData();
+            this.initWebSocket();
+          }
+        },
+        deep: true
+      }
+    },
+    
+    // 清理用户数据方法
+    cleanupUserData() {
+      // 关闭当前WebSocket连接
+      this.closeSocket();
+      
+      // 清理所有聊天相关数据
+      this.messages = [];
+      this.notifications = [];
+      this.notificationUsers.clear();
+      this.currentChatUser = null;
+      this.onlineUsers = [];
+      
+      // 清理本地存储
+      localStorage.removeItem('chatMessages');
+      localStorage.removeItem('notifications');
+      localStorage.removeItem('notificationUsers');
+      
+      console.log('用户切换，聊天数据已清理');
     },
   },
 };
@@ -948,5 +1139,116 @@ export default {
 
 .el-tag {
   margin-left: 5px;
+}
+
+/* 表情包样式 */
+.emoji-area {
+  margin-top: 10px;
+  position: relative;
+}
+
+.OwO {
+  position: relative;
+  z-index: 1;
+}
+
+.OwO .OwO-logo {
+  color: #444;
+  display: inline-block;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background: #f4f6f7;
+  transition: all 0.3s;
+}
+
+.OwO .OwO-logo:hover {
+  background: #e6e9eb;
+}
+
+.OwO .OwO-body {
+  position: absolute;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  z-index: 2;
+  width: 400px;
+  height: 200px;
+  font-size: 14px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  display: none;
+  bottom: 30px;
+  left: 0;
+}
+
+.OwO-open .OwO-body {
+  display: block;
+}
+
+.OwO-items {
+  height: 160px;
+  overflow-y: auto;
+  padding: 5px;
+}
+
+.OwO-items-show {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.OwO-item {
+  width: 40px;
+  height: 40px;
+  margin: 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.OwO-item:hover {
+  background: #f0f0f0;
+}
+
+.OwO-item img {
+  max-width: 24px;
+  max-height: 24px;
+}
+
+.OwO-bar {
+  height: 30px;
+  border-top: 1px solid #ddd;
+  padding: 0 10px;
+  line-height: 30px;
+  color: #5a5a5a;
+  background: #fafafa;
+}
+
+.OwO-packages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.OwO-packages li {
+  display: inline-block;
+  padding: 0 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.OwO-package-active {
+  background: #409eff;
+  color: white;
+}
+
+/* 消息气泡中的表情样式 */
+.message-bubble img {
+  vertical-align: middle;
+  margin: 0 2px;
 }
 </style>

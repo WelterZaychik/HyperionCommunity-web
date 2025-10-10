@@ -19,7 +19,7 @@
             </div>
           </header>
           <el-divider></el-divider>
-          <div class="topic-content markdown-body" v-html="topic.content"></div>
+          <div class="detail-topic-content markdown-body" v-html="topic.content"></div>
         </div>
 
         <!-- 视频模块 -->
@@ -218,7 +218,7 @@ header h2 i {
   margin-left: 10px;
 }
 
-.topic-content {
+.detail-topic-content {
   min-height: 600px;
   // background-color: aqua;
 }
@@ -246,11 +246,11 @@ header h2 i {
   margin: 30px 0;
 }
 
-.topic-content img {
+.detail-topic-content img {
   width: 100%;
 }
 
-.detailBox .topic-content {
+.detailBox .detail-topic-content {
   font-size: 15px;
   white-space: normal;
   word-wrap: break-word;
@@ -258,37 +258,37 @@ header h2 i {
   overflow-x: hidden;
   margin-top: 25px;
 }
-.detailBox .topic-content p {
+.detailBox .detail-topic-content p {
   margin: 10px 0;
   line-height: 24px;
   word-wrap: break-word;
   word-break: break-all;
   overflow-x: hidden;
 }
-.detailBox .topic-content pre {
+.detailBox .detail-topic-content pre {
   word-wrap: break-word;
   word-break: break-all;
   overflow-x: hidden;
 }
-.detailBox .topic-content img {
+.detailBox .detail-topic-content img {
   max-width: 100% !important;
   height: auto !important;
   overflow-x: hidden;
 }
-.detailBox .topic-content a {
+.detailBox .detail-topic-content a {
   color: #df2050 !important;
 }
-.detailBox .topic-content a:hover {
+.detailBox .detail-topic-content a:hover {
   text-decoration: underline;
   color: #f00 !important;
 }
-.detailBox .topic-content i {
+.detailBox .detail-topic-content i {
   font-style: italic;
 }
-.detailBox .topic-content strong {
+.detailBox .detail-topic-content strong {
   font-weight: bold;
 }
-.detailBox .topic-content ul {
+.detailBox .detail-topic-content ul {
   list-style-type: disc !important;
   list-style: disc !important;
   padding-left: 40px !important;
@@ -297,15 +297,15 @@ header h2 i {
     list-style: disc !important;
   }
 }
-.detailBox .topic-content h1,
-.detailBox .topic-content h2,
-.detailBox .topic-content h3 {
+.detailBox .detail-topic-content h1,
+.detailBox .detail-topic-content h2,
+.detailBox .detail-topic-content h3 {
   font-size: 200%;
   font-weight: bold;
 }
-.detailBox .topic-content h4,
-.detailBox .topic-content h5,
-.detailBox .topic-content h6 {
+.detailBox .detail-topic-content h4,
+.detailBox .detail-topic-content h5,
+.detailBox .detail-topic-content h6 {
   font-size: 150%;
   font-weight: bold;
 }

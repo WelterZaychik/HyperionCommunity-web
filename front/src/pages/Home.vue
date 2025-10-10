@@ -6,7 +6,7 @@
       <div class="leftBox">
         <!-- 轮播图 -->
         <el-carousel indicator-position="outside" height="300px">
-          <el-carousel-item v-for="item in phList" key = "index" class="phitem">
+          <el-carousel-item v-for="(item, index) in phList" :key="index" class="phitem">
             <a :href="'#/TopicDetail/'+item.id"><img :src="item.coverImage" style="width:650px"/></a>
           </el-carousel-item>
         </el-carousel>
@@ -73,17 +73,17 @@ export default {
   created() {
     this.getCoverImg();
   },
-  watch: {
-    $route: function (to, from) {
-      if (
-        from.path == "/UserInfo" ||
-        from.path == "/Login" ||
-        from.path == "/CreateTopic"
-      ) {
-        location.reload();
-      }
-    },
-  },
+  // watch: {
+  //   $route: function (to, from) {
+  //     if (
+  //       from.path == "/UserInfo" ||
+  //       from.path == "/Login" ||
+  //       from.path == "/CreateTopic"
+  //     ) {
+  //       location.reload();
+  //     }
+  //   },
+  // },
 };
 </script>
 

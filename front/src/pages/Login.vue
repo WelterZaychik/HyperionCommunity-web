@@ -76,7 +76,10 @@ export default {
               );
               localStorage.setItem("token", response.data.token);
               this.$message.success("登录成功");
-              this.$router.push("/");
+              // 跳转到首页并刷新页面
+              this.$router.push("/").then(() => {
+                window.location.reload();
+              });
             }
           });
       }

@@ -1,36 +1,58 @@
 <template>
-  <div class="navBack">
-    <nav>
-      <div class="logoBox">
-        <img :src="require('../assets/logo.png')" alt="" id="logo">
-        <h1 id="title">闪电鼠</h1>
+  <div class="nav-container">
+    <nav class="nav">
+      <div class="nav-brand">
+        <img :src="require('../assets/logo.png')" alt="闪电鼠" class="nav-logo">
+        <h1 class="nav-title">闪电鼠</h1>
       </div>
-      <!-- <div class="mobile-menu">
-        <div class="line1"></div>
-        <div class="line2"></div>
-        <div class="line3"></div>
-      </div> -->
-      <ul class="nav-list">
-        <li>
-          <router-link to="/Home" class="taga" :class="ifActive === 1 ? 'tagActive' : ''">首页</router-link>
+      
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <router-link to="/Home" class="nav-link" :class="{ 'nav-link--active': ifActive === 1 }">
+            <i class="el-icon-house"></i>
+            <span>首页</span>
+          </router-link>
         </li>
-        <li>
-          <router-link to="/Community" class="taga" :class="ifActive === 2 ? 'tagActive' : ''">社区</router-link>
+        <li class="nav-item">
+          <router-link to="/Community" class="nav-link" :class="{ 'nav-link--active': ifActive === 2 }">
+            <i class="el-icon-chat-dot-round"></i>
+            <span>社区</span>
+          </router-link>
         </li>
-        <li>
-          <router-link to="/Official" class="taga" :class="ifActive === 3 ? 'tagActive' : ''">官方</router-link>
+        <li class="nav-item">
+          <router-link to="/Official" class="nav-link" :class="{ 'nav-link--active': ifActive === 3 }">
+            <i class="el-icon-office-building"></i>
+            <span>官方</span>
+          </router-link>
         </li>
-        <li>
-          <router-link to="/Resources" class="taga" :class="ifActive === 4 ? 'tagActive' : ''">资源</router-link>
+        <li class="nav-item">
+          <router-link to="/Resources" class="nav-link" :class="{ 'nav-link--active': ifActive === 4 }">
+            <i class="el-icon-folder-opened"></i>
+            <span>资源</span>
+          </router-link>
         </li>
-        <!-- <li>
-          <a href="#/Wiki" class="taga" :class="ifActive === 5 ? 'tagActive' : ''">wiki</a>
-        </li> -->
       </ul>
-      <el-button v-if="this.token!=''" icon="el-icon-edit" size="small" class="editbutton" @click="goCreatePage()">创作中心</el-button>
-
-      <div class="UserAva"  @click="goUserInfo()">
-        <el-avatar :src="this.avatar==''? this.Avatar:this.avatar"></el-avatar>
+      
+      <div class="nav-actions">
+        <el-button 
+          v-if="token" 
+          type="primary" 
+          icon="el-icon-edit" 
+          size="small" 
+          class="create-btn" 
+          @click="goCreatePage()">
+          创作中心
+        </el-button>
+        
+        <div class="user-avatar" @click="goUserInfo()">
+          <el-avatar 
+            :src="avatar || Avatar" 
+            :size="36"
+            class="avatar">
+            <i v-if="!avatar" class="el-icon-user"></i>
+          </el-avatar>
+          <div class="avatar-indicator" :class="{ 'avatar-indicator--online': token }"></div>
+        </div>
       </div>
     </nav>
   </div>
@@ -116,156 +138,214 @@ export default {
 };
 </script>
 
-<style>
-#logo {
-  width: 70px;
+<style scoped>
+.nav-container {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
 }
 
-.logoBox{
+.nav {
   display: flex;
-  /* justify-content: center; */
   align-items: center;
-  flex: 0 0 55%;
-}
-
-#title {
-  color: #fff;
-}
-
-.taga {
-  color: #bbbbbb;
-  text-decoration: none;
-  transition: 0.3s;
-}
-.taga:hover,
-.tagActive {
-  color: #fff;
-  text-shadow: 0px 0px 10px #fff;
-  /* opacity: 0.7; */
-}
-
-.logo {
-  font-size: 24px;
-  text-transform: uppercase;
-  letter-spacing: 4px;
-}
-
-.navBack {
-  background: linear-gradient(to right, #091c4b, #203aa3, #091c4b);
-  height: 60px;
-}
-
-/* 
-这个是之前写的原版，注释掉，应为直接分移动端和pc端开发，暂时不需要这类相应组件，还有上面的navback
- nav {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  font-family: "system-ui", -apple-system, "Helvetica", Arial, sans-serif;
-  background: #23232e;
-  height: 60px; 
-} */
-nav {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-family: "system-ui", -apple-system, "Helvetica", Arial, sans-serif;
-  height: 60px;
-  width: 1200px;
+  max-width: 1200px;
+  height: 64px;
   margin: 0 auto;
+  padding: 0 20px;
 }
 
-/* main { */
-/* background: url("./bg.jpg") no-repeat center center; */
-/* background-size: cover;
-  height: 90vh; */
-/* } */
-
-.nav-list {
-  /* 黑点消失 */
-  list-style: none;
+.nav-brand {
   display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
-.nav-list li {
-  letter-spacing: 3px;
-  margin-left: 32px;
-}
-
-.mobile-menu {
-  display: none;
-  cursor: pointer;
-}
-
-.mobile-menu div {
-  width: 32px;
-  height: 2px;
-  background: #fff;
-  margin: 8px;
-  transition: 0.3s;
-}
-
-.UserAva{
-  border: 2px solid rgb(1, 141, 255);
-  border-radius: 50%;
+.nav-logo {
   width: 40px;
   height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
 }
 
-/* 开始响应式 */
-/* @media (max-width: 999px) {
-  body {
-    overflow-x: hidden;
-  }
-  .nav-list {
-    position: absolute;
-    top: 8vh;
-    right: 0;
-    width: 30vw;
-    height: 92vh;
-    background: #23232e;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-around;
-    transform: translateX(100%);
-    transition: transform 0.3s ease-in;
-  }
-
-  .nav-list li {
-    margin-left: 0;
-    opacity: 0;
-  }
-
-  .mobile-menu {
-    display: block;
-  }
-
-  .nav-list.active {
-    transform: translateX(0);
-  }
-
-  @keyframes navLinkFade {
-    from {
-      opacity: 0;
-      transform: translateX(50px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-} */
-
-.mobile-menu.active .line1 {
-  transform: rotate(-45deg) translate(-8px, 8px);
+.nav-title {
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-.mobile-menu.active .line2 {
-  opacity: 0;
+
+.nav-menu {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
 }
-.mobile-menu.active .line3 {
-  transform: rotate(45deg) translate(-5px, -7px);
+
+.nav-item {
+  margin: 0;
 }
-.el-avatar {
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  border-radius: var(--border-radius);
+  transition: all 0.3s ease;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.nav-link:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.nav-link--active {
+  color: white;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nav-link i {
+  font-size: 16px;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.create-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.create-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.user-avatar {
+  position: relative;
   cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+}
+
+.avatar {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: border-color 0.3s ease;
+}
+
+.user-avatar:hover .avatar {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.avatar-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  border: 2px solid white;
+  transition: background-color 0.3s ease;
+}
+
+.avatar-indicator--online {
+  background: var(--success-color);
+}
+
+/* 响应式设计 */
+@media (max-width: 1024px) {
+  .nav {
+    padding: 0 16px;
+  }
+  
+  .nav-menu {
+    gap: 4px;
+  }
+  
+  .nav-link {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    padding: 0 12px;
+    height: 56px;
+  }
+  
+  .nav-title {
+    font-size: 18px;
+  }
+  
+  .nav-logo {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .nav-menu {
+    gap: 2px;
+  }
+  
+  .nav-link {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  .nav-link span {
+    display: none;
+  }
+  
+  .nav-link i {
+    font-size: 14px;
+  }
+  
+  .create-btn span {
+    display: none;
+  }
+  
+  .create-btn .el-icon-edit {
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-brand {
+    gap: 8px;
+  }
+  
+  .nav-title {
+    font-size: 16px;
+  }
+  
+  .nav-actions {
+    gap: 12px;
+  }
 }
 </style>
